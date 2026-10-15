@@ -1,0 +1,46 @@
+
+version: 2
+
+models:
+  - name: stg_facebook_ads_stats
+    description: >
+      Cleaned Facebook ad-level performance data.
+      Preserves source rows and converts literal null
+      metrics into SQL NULL values.
+
+    columns:
+      - name: ad_id
+        description: "Facebook advertisement identifier."
+        data_tests:
+          - not_null
+
+      - name: account_id
+        description: "Facebook advertising account identifier."
+        data_tests:
+          - not_null
+
+      - name: date
+        description: "Date on which performance was recorded."
+        data_tests:
+          - not_null
+
+      - name: platform
+        description: "Source advertising platform."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['facebook']
+
+      - name: spend
+        description: "Advertising spend in source currency."
+
+      - name: impressions
+        description: >
+          Number of impressions. NULL indicates that
+          the source did not provide a valid value.
+
+      - name: clicks
+        description: >
+          Number of clicks. NULL indicates that
+          the source did not provide a valid value.

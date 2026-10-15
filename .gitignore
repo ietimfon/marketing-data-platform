@@ -1,0 +1,43 @@
+# Credentials and environment files
+.env
+.env.*
+*.pem
+*.key
+profiles.yml
+**/profiles.yml
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# dbt generated files
+**/target/
+**/logs/
+**/dbt_packages/
+
+# Elementary generated reports
+elementary_report.html
+**/elementary_report.html
+
+# Local editor settings
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+
+# Elementary CLI runtime artifacts
+**/edr_target/
+
+# Raw sample datasets
+/cde_dbt_sample_data/
+
+# Windows-generated files
+Thumbs.db

@@ -1,0 +1,75 @@
+
+version: 2
+
+models:
+  - name: fct_marketing_spend
+    description: >
+      Unified Facebook and Snapchat advertising
+      performance fact table. Grain is one source
+      performance record with platform-specific
+      reporting breakdowns. Spend is in source currency.
+      Ratios are percentages or monetary values calculated
+      per source record.
+
+    columns:
+      - name: marketing_spend_key
+        description: "Deterministic source-record surrogate key."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: platform
+        description: "Advertising platform."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['facebook', 'snapchat']
+
+      - name: date
+        description: "Advertising performance reporting date."
+        data_tests:
+          - not_null
+
+      - name: ad_id
+        description: "Platform-specific ad identifier."
+        data_tests:
+          - not_null
+
+      - name: currency_code
+        description: "ISO source currency code for spend."
+        data_tests:
+          - not_null
+
+      - name: spend
+        description: >
+          Advertising spend in source currency.
+          Must not be combined across different
+          currencies without conversion.
+
+      - name: impressions
+        description: >
+          Reported impression count. NULL means missing
+          or invalid source data, not zero.
+
+      - name: clicks
+        description: >
+          Reported click count. NULL means missing
+          or invalid source data, not zero.
+
+      - name: ctr
+        description: >
+          Click-through rate percentage:
+          clicks / impressions * 100.
+          NULL when undefined.
+
+      - name: cpc
+        description: >
+          Cost per click: spend / clicks.
+          NULL when undefined.
+
+      - name: cpm
+        description: >
+          Cost per thousand impressions:
+          spend / impressions * 1000.
+          NULL when undefined.

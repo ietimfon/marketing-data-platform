@@ -1,0 +1,25 @@
+
+version: 2
+
+models:
+  - name: int_snapchat_adgroups_deduped
+    description: >
+      Latest available Snapchat ad-group metadata,
+      deduplicated to one record per ad_group_id.
+      Uses updated_at descending with source_surrogate_key
+      as a deterministic tie-breaker.
+
+    columns:
+      - name: ad_group_id
+        description: "Unique Snapchat ad-group identifier."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: campaign_id
+        description: "Associated Snapchat campaign identifier."
+        data_tests:
+          - not_null
+
+      - name: ad_group_name
+        description: "Latest available ad-group name."
