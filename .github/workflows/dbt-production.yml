@@ -7,9 +7,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: dbt-production
+  cancel-in-progress: false
+
 jobs:
-  verify-production:
-    name: Verify Production Configuration
+  deploy-production:
+    name: Build and Verify Production
     runs-on: ubuntu-latest
     environment: production
 
@@ -40,6 +44,7 @@ jobs:
       - name: Configure production dbt profile
         run: |
           mkdir -p ~/.dbt
+
           cat > ~/.dbt/profiles.yml <<'EOF'
           marketing_dbt:
             target: prod
@@ -55,6 +60,7 @@ jobs:
                 client_secret: "{{ env_var('DATABRICKS_CLIENT_SECRET') }}"
                 threads: 2
           EOF
+
           chmod 600 ~/.dbt/profiles.yml
 
       - name: Install dbt packages
@@ -104,3 +110,21 @@ jobs:
 
           print("Production schema routing verified")
           PY
+
+      - name: Build and test production models
+        run: |
+          dbt build --select "package:marketing_dbt,resource_type:model" --target prod --threads 2
+
+      - name: Verify production Gold row count
+        run: dbt run-operation verify_production_gold --target prod
+
+      - name: Upload production dbt artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-production-results
+          path: |
+            marketing_dbt/target/run_results.json
+            marketing_dbt/target/manifest.json
+          if-no-files-found: warn
+          retention-days: 14
