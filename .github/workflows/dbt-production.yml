@@ -1,0 +1,106 @@
+
+name: dbt Production Deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    name: Verify Production Configuration
+    runs-on: ubuntu-latest
+    environment: production
+
+    defaults:
+      run:
+        working-directory: marketing_dbt
+
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dbt-core==1.12.5 dbt-databricks==1.12.6
+
+      - name: Configure production dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<'EOF'
+          marketing_dbt:
+            target: prod
+            outputs:
+              prod:
+                type: databricks
+                auth_type: oauth
+                catalog: marketing_prod
+                schema: silver
+                host: "{{ env_var('DATABRICKS_HOST') }}"
+                http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+                client_id: "{{ env_var('DATABRICKS_CLIENT_ID') }}"
+                client_secret: "{{ env_var('DATABRICKS_CLIENT_SECRET') }}"
+                threads: 2
+          EOF
+          chmod 600 ~/.dbt/profiles.yml
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Verify production connection
+        run: dbt debug --target prod
+
+      - name: Verify Service Principal identity
+        run: dbt run-operation verify_connection_identity --target prod
+
+      - name: Verify Bronze access
+        run: dbt run-operation verify_bronze_access --target prod
+
+      - name: Verify production model routing
+        run: |
+          dbt parse --target prod
+
+          python - <<'PY'
+          import json
+
+          with open("target/manifest.json", encoding="utf-8") as f:
+              manifest = json.load(f)
+
+          checks = {
+              "model.marketing_dbt.stg_facebook_ads_stats": ("marketing_prod", "silver"),
+              "model.marketing_dbt.fct_marketing_spend": ("marketing_prod", "gold"),
+          }
+
+          for node_id, (expected_catalog, expected_schema) in checks.items():
+              node = manifest["nodes"][node_id]
+              assert node["database"] == expected_catalog, node_id
+              assert node["schema"] == expected_schema, node_id
+              print(f"{node['name']}: {expected_catalog}.{expected_schema}")
+
+          elementary_models = [
+              node for node in manifest["nodes"].values()
+              if node["package_name"] == "elementary"
+              and node["resource_type"] == "model"
+          ]
+
+          assert elementary_models, "Elementary models were not found"
+
+          for node in elementary_models:
+              assert node["database"] == "marketing_prod"
+              assert node["schema"] == "elementary"
+
+          print("Production schema routing verified")
+          PY
