@@ -1,0 +1,20 @@
+
+version: 2
+
+models:
+  - name: fct_marketing_spend_incremental
+    description: >
+      Demonstration of dbt incremental materialization using
+      Databricks Delta MERGE. The model copies the validated
+      marketing spend fact table on its initial run and uses
+      a configurable seven-day lookback on subsequent runs.
+      This is not a complete change-data-capture solution.
+
+    columns:
+      - name: marketing_spend_key
+        description: >
+          Deterministic SHA-256 key identifying an advertising
+          statistics record.
+        data_tests:
+          - unique
+          - not_null
